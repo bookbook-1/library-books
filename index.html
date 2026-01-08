@@ -17,50 +17,43 @@
     <div id="book-gallery" class="gallery"></div>
 
 <script>
-        /**
-         * 2. 실시간 연동 설정
-         * [파일] > [공유] > [웹에 게시] 에서 가져온 CSV 주소를 아래에 넣으세요.
-         */
-        const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv";
+       const sheetCsvUrl = "여러분의_구글시트_CSV_주소";
 
-        async function loadBooks() {
-            try {
-                const response = await fetch(sheetCsvUrl);
-                const data = await response.text();
-                
-                // CSV 파싱 (줄 바꿈으로 나누기)
-                const rows = data.split('\n').slice(1); 
-                const gallery = document.getElementById('book-gallery');
-                gallery.innerHTML = ''; // 초기화
+async function loadBooks() {
+    try {
+        // 캐시 방지를 위해 주소 뒤에 타임스탬프 추가
+        const response = await fetch(sheetCsvUrl + "?t=" + new Date().getTime());
+        const data = await response.text();
+        
+        // 정규식을 사용해 쉼표가 든 제목도 안전하게 분리합니다.
+        const rows = data.split(/\r?\n/).slice(1); 
+        const gallery = document.getElementById('book-gallery');
+        gallery.innerHTML = ''; 
 
-                rows.forEach(row => {
-                    // 쉼표로 열 구분 (제목, 이미지, 링크)
-                    const columns = row.split(',');
-                    if (columns.length >= 3) {
-                        const title = columns[0].trim();
-                        const img = columns[1].trim();
-                        const link = columns[2].trim();
+        rows.forEach(row => {
+            // CSV의 한 줄을 쉼표 기준으로 나누되, 따옴표 안의 쉼표는 무시하는 규칙
+            const columns = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+            
+            if (columns && columns.length >= 3) {
+                const title = columns[0].replace(/"/g, "").trim();
+                const img = columns[1].replace(/"/g, "").trim();
+                const link = columns[2].replace(/"/g, "").trim();
 
-                        // 이미지가 있는 데이터만 표시
-                        if (img && img !== "이미지") {
-                            const card = `
-                                <a href="${link}" target="_blank" class="book-card">
-                                    <img src="${img}" alt="${title}">
-                                    <p>${title}</p>
-                                </a>
-                            `;
-                            gallery.innerHTML += card;
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("데이터 로드 에러:", error);
-                document.getElementById('book-gallery').innerHTML = "<p>도서 목록을 불러오는 중 오류가 발생했습니다.</p>";
+                if (img && img !== "이미지") {
+                    gallery.innerHTML += `
+                        <a href="${link}" target="_blank" class="book-card">
+                            <img src="${img}" alt="${title}">
+                            <p>${title}</p>
+                        </a>`;
+                }
             }
-        }
+        });
+    } catch (error) {
+        console.error("데이터 로드 에러:", error);
+    }
+}
 
-        // 페이지 로드 시 실행
-        loadBooks();
+loadBooks();
     </script>
 </body>
 </html>
