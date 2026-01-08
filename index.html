@@ -16,21 +16,51 @@
     <h1 style="text-align:center; margin-bottom:50px;">📚 교직원 신착도서 </h1>
     <div id="book-gallery" class="gallery"></div>
 
-    <script>
-        fetch('books_data.json')
-            .then(res => res.json())
-            .then(data => {
+<script>
+        /**
+         * 2. 실시간 연동 설정
+         * [파일] > [공유] > [웹에 게시] 에서 가져온 CSV 주소를 아래에 넣으세요.
+         */
+        const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv";
+
+        async function loadBooks() {
+            try {
+                const response = await fetch(sheetCsvUrl);
+                const data = await response.text();
+                
+                // CSV 파싱 (줄 바꿈으로 나누기)
+                const rows = data.split('\n').slice(1); 
                 const gallery = document.getElementById('book-gallery');
-                data.forEach(book => {
-                    if(book.이미지) {
-                        gallery.innerHTML += `
-                            <a href="${book.링크}" target="_blank" class="book-card">
-                                <img src="${book.이미지}" alt="${book.제목}">
-                                <p>${book.제목}</p>
-                            </a>`;
+                gallery.innerHTML = ''; // 초기화
+
+                rows.forEach(row => {
+                    // 쉼표로 열 구분 (제목, 이미지, 링크)
+                    const columns = row.split(',');
+                    if (columns.length >= 3) {
+                        const title = columns[0].trim();
+                        const img = columns[1].trim();
+                        const link = columns[2].trim();
+
+                        // 이미지가 있는 데이터만 표시
+                        if (img && img !== "이미지") {
+                            const card = `
+                                <a href="${link}" target="_blank" class="book-card">
+                                    <img src="${img}" alt="${title}">
+                                    <p>${title}</p>
+                                </a>
+                            `;
+                            gallery.innerHTML += card;
+                        }
                     }
                 });
-            });
+            } catch (error) {
+                console.error("데이터 로드 에러:", error);
+                document.getElementById('book-gallery').innerHTML = "<p>도서 목록을 불러오는 중 오류가 발생했습니다.</p>";
+            }
+        }
+
+        // 페이지 로드 시 실행
+        loadBooks();
     </script>
 </body>
 </html>
