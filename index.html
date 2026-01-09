@@ -5,39 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>교직원 신착도서 </title>
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #fdfaf5; padding: 40px 20px; color: #333; }
-        h1 { text-align: center; margin-bottom: 50px; font-weight: 800; color: #2c3e50; }
-        #status-message { text-align: center; color: #d32f2f; margin-bottom: 20px; font-weight: bold; }
+        :root { --primary-color: #2c3e50; --bg-color: #fdfaf5; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); padding: 40px 20px; color: #333; margin: 0; }
+        h1 { text-align: center; margin-bottom: 50px; font-weight: 800; color: var(--primary-color); letter-spacing: -1px; }
+
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto; }
-        .book-card { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; transition: 0.3s; text-decoration: none; color: inherit; display: flex; flex-direction: column; padding: 25px; border: 1px solid #f0f0f0; height: 100%; box-sizing: border-box; }
-        .book-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(0,0,0,0.12); }
+        
+        .book-card { 
+            background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); 
+            overflow: hidden; transition: 0.4s; text-decoration: none; color: inherit; 
+            display: flex; flex-direction: column; padding: 25px; border: 1px solid #f0f0f0; 
+            position: relative; height: 100%; box-sizing: border-box;
+        }
+        .book-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
+        
+        /* 배지 스타일 */
+        .badge {
+            position: absolute; top: 20px; right: 20px; padding: 6px 14px; 
+            border-radius: 30px; font-size: 0.75rem; font-weight: 800; color: white; 
+            z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .badge-new { background: #ff7675; }
+        .badge-pick { background: #fab1a0; }
+        .badge-hot { background: #d63031; }
+
         .book-card img { width: 100%; height: 350px; object-fit: contain; border-radius: 12px; background: #f9f9f9; margin-bottom: 20px; }
-        .title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; line-height: 1.4; color: #1a1a1a; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; line-height: 1.4; color: #1a1a1a; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 3.4rem; }
         .info { font-size: 0.9rem; color: #666; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .description { font-size: 0.95rem; color: #777; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .description { font-size: 0.95rem; color: #777; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        #status { text-align: center; color: #999; padding: 50px; }
     </style>
 </head>
 <body>
 
-    <h1>📚 교직원 신착도서</h1>
-    
-    <div id="status-message">데이터를 불러오는 중입니다...</div>
-
+    <h1>📚 교직원 신착도서 전시회</h1>
+    <div id="status">데이터를 동기화 중입니다...</div>
     <div id="book-gallery" class="gallery"></div>
 
     <script>
-        // 사용자님이 주신 구글 시트 CSV 주소 (A:F 범위를 강제로 지정)
-        const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv&range=A:F";
+        // G열까지 데이터를 가져오도록 범위 수정 (A:G)
+        const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv&range=A:G";
 
-        // CSV 파싱 함수 (쉼표와 따옴표 문제를 해결)
         function parseCSV(text) {
-            const rows = [];
-            let row = [];
-            let col = '';
-            let inQuotes = false;
+            const rows = []; let row = []; let col = ''; let inQuotes = false;
             for (let i = 0; i < text.length; i++) {
-                let char = text[i];
-                let next = text[i+1];
+                let char = text[i]; let next = text[i+1];
                 if (char === '"' && inQuotes && next === '"') { col += '"'; i++; }
                 else if (char === '"') { inQuotes = !inQuotes; }
                 else if (char === ',' && !inQuotes) { row.push(col); col = ''; }
@@ -49,55 +61,47 @@
         }
 
         async function loadBooks() {
-            const gallery = document.getElementById('book-gallery');
-            const status = document.getElementById('status-message');
-
             try {
                 const response = await fetch(sheetCsvUrl + "&t=" + new Date().getTime());
-                if (!response.ok) throw new Error("구글 시트 연결 실패");
-
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
-                
-                // 첫 줄(헤더) 빼고 데이터가 있는지 확인
-                if (data.length <= 1) {
-                    status.innerText = "표시할 데이터가 없습니다. 시트를 확인하세요.";
-                    return;
-                }
-
+                const gallery = document.getElementById('book-gallery');
                 gallery.innerHTML = ''; 
 
                 for (let i = 1; i < data.length; i++) {
                     const cols = data[i];
-                    
-                    // 최소한 제목(A)과 이미지(E)가 있는지 확인
                     if (cols.length >= 5) {
                         const title = cols[0].trim();
-                        const author = cols[1] || '정보 없음';
+                        const author = cols[1] || '';
                         const pub = cols[2] || '';
                         const desc = cols[3] || '';
                         const img = cols[4] ? cols[4].trim() : '';
                         const link = cols[5] ? cols[5].trim() : '#';
+                        // G열은 인덱스 번호로 6번입니다.
+                        const badgeText = cols[6] ? cols[6].trim() : ''; 
+
+                        let badgeHtml = '';
+                        if (badgeText === '신규') badgeHtml = '<div class="badge badge-new">NEW</div>';
+                        else if (badgeText === '추천') badgeHtml = '<div class="badge badge-pick">PICK</div>';
+                        else if (badgeText === '인기') badgeHtml = '<div class="badge badge-hot">HOT</div>';
 
                         if (img.startsWith('http')) {
                             gallery.innerHTML += `
                                 <a href="${link}" target="_blank" class="book-card">
-                                    <img src="${img}" alt="${title}" onerror="this.src='https://via.placeholder.com/300x400?text=이미지+오류'">
+                                    ${badgeHtml}
+                                    <img src="${img}" alt="${title}" onerror="this.src='https://via.placeholder.com/300x450?text=이미지준비중'">
                                     <div class="title">${title}</div>
-                                    <div class="info">${author} ${pub ? '| ' + pub : ''}</div>
+                                    <div class="info">${author} | ${pub}</div>
                                     <div class="description">${desc}</div>
                                 </a>`;
                         }
                     }
                 }
-
-                status.style.display = 'none'; // 성공하면 메시지 숨김
+                document.getElementById('status').style.display = 'none';
             } catch (e) {
-                console.error(e);
-                status.innerText = "오류 발생: " + e.message;
+                document.getElementById('status').innerText = "데이터 로드 오류: " + e.message;
             }
         }
-
         loadBooks();
     </script>
 </body>
