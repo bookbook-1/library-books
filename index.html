@@ -15,7 +15,7 @@
         .dashboard-container {
             max-width: 800px; margin: 0 auto 30px; background: white; 
             padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            text-align: center; border: 1px solid #f0f0f0; display: none; /* 로딩 전엔 숨김 */
+            text-align: center; border: 1px solid #f0f0f0; display: none;
         }
         .dashboard-title { font-size: 0.95rem; color: #666; margin-bottom: 15px; font-weight: 600; }
         .dashboard-title strong { color: var(--primary); font-size: 1.2rem; }
@@ -79,17 +79,14 @@
         }
         .badge-신규 { background: #2c3e50; }
         .badge-추천 { background: #d4a373; }
-        .badge-인기 { background: #e63946; } /* 이전 코드와 클래스명 매칭 */
-        .badge-new { background: #2c3e50; } /* 호환성 유지 */
-        .badge-pick { background: #d4a373; }
-        .badge-hot { background: #e63946; }
+        .badge-인기 { background: #e63946; }
 
         .book-card img { width: 100%; height: 350px; object-fit: contain; border-radius: 12px; background: #f9f9f9; margin-bottom: 20px; }
         .title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; line-height: 1.4; color: #1a1a1a; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 3.4rem; }
         .info { font-size: 0.9rem; color: #666; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .description { font-size: 0.95rem; color: #777; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* 팝업 모달 */
+        /* 팝업 모달 & 룰렛 효과 */
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
@@ -108,10 +105,14 @@
         .modal-title { font-size: 1.5rem; color: #6c5ce7; margin-bottom: 20px; font-weight: 800; }
         .modal-img { width: 60%; max-height: 300px; object-fit: contain; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
         
+        /* 펑! 하고 튀어나오는 애니메이션 */
+        .pop-anim { animation: popScale 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popScale { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
         @keyframes slideUp { from {transform: translateY(50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
 
-        /* 상태 메시지 스타일 */
+        /* 상태 메시지 */
         #status { 
             text-align: center; color: #666; padding: 50px; font-size: 1.1rem; 
             border: 2px dashed #ddd; margin: 20px auto; max-width: 600px; border-radius: 10px;
@@ -123,10 +124,7 @@
 
     <h1>📚 교직원 신착도서</h1>
     
-    <div id="status">
-        데이터를 불러오는 중입니다...<br>
-        <span style="font-size:0.8rem; color:#999;">(잠시만 기다려주세요)</span>
-    </div>
+    <div id="status">데이터를 불러오는 중입니다...</div>
 
     <div id="dashboard" class="dashboard-container">
         <div class="dashboard-title">
@@ -160,22 +158,17 @@
     </div>
 
     <script>
-        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // 여기에 본인의 구글 시트 CSV 주소를 넣어주세요.
-        // 예시: "https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?output=csv"
+        // ▼▼▼ 여기에 본인의 구글 시트 주소를 넣으세요 ▼▼▼
         const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv"; 
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-        // --- 안전 장치: 에러 발생 시 화면에 표시 ---
         window.addEventListener('error', function(e) {
             const statusDiv = document.getElementById('status');
             statusDiv.className = 'error-box';
-            statusDiv.innerHTML = `🚨 오류 발생!<br>${e.message}<br><br><small>주소를 제대로 입력했는지 확인해주세요.</small>`;
+            statusDiv.innerHTML = `🚨 오류 발생!<br>${e.message}`;
         });
 
         let allBooks = []; 
-        
-        // 색상 설정
         const categoryColors = {
             '총류': '#27ae60', '철학': '#c0392b', '종교': '#7f8c8d',
             '사회과학': '#e67e22', '자연과학': '#795548', '기술과학': '#00a8ff',
@@ -208,21 +201,13 @@
 
         async function loadBooks() {
             try {
-                if (sheetCsvUrl.includes("여기에_주소를")) {
-                    throw new Error("코드에 구글 시트 주소가 입력되지 않았습니다.");
-                }
-
+                if (sheetCsvUrl.includes("여기에_주소를")) throw new Error("코드에 구글 시트 주소가 입력되지 않았습니다.");
                 const response = await fetch(sheetCsvUrl + "&t=" + new Date().getTime());
                 if (!response.ok) throw new Error("네트워크 오류: " + response.status);
-                
                 const csvText = await response.text();
-                // HTML 에러 페이지가 왔는지 확인
-                if (csvText.trim().startsWith("<!DOCTYPE") || csvText.includes("<html")) {
-                    throw new Error("CSV 형식이 아닙니다. '웹에 게시' 설정을 확인하세요.");
-                }
+                if (csvText.trim().startsWith("<!DOCTYPE") || csvText.includes("<html")) throw new Error("CSV 형식이 아닙니다.");
 
                 const data = parseCSV(csvText);
-                
                 allBooks = [];
                 for (let i = 1; i < data.length; i++) {
                     const cols = data[i];
@@ -242,14 +227,12 @@
                         });
                     }
                 }
-
                 allBooks.sort((a, b) => a.callNo.localeCompare(b.callNo));
 
                 renderDashboard();
                 createFilterButtons();
                 renderBooks('전체');
 
-                // 성공 시
                 document.getElementById('status').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block'; 
 
@@ -263,78 +246,96 @@
         function renderDashboard() {
             const total = allBooks.length;
             document.getElementById('total-count').innerText = total;
-
             const stats = {};
             allBooks.forEach(book => { stats[book.category] = (stats[book.category] || 0) + 1; });
-
             const order = ['총류', '철학', '종교', '사회과학', '자연과학', '기술과학', '예술', '언어', '문학', '역사', '기타'];
-            
             const barContainer = document.getElementById('dna-bar');
             const legendContainer = document.getElementById('stat-legend');
-            
-            barContainer.innerHTML = '';
-            legendContainer.innerHTML = '';
-
+            barContainer.innerHTML = ''; legendContainer.innerHTML = '';
             order.forEach(cat => {
                 const count = stats[cat];
                 if (count > 0) {
                     const percentage = (count / total) * 100;
                     const color = categoryColors[cat] || '#ccc';
-
                     const segment = document.createElement('div');
                     segment.className = 'dna-segment';
                     segment.style.width = '0%'; 
                     segment.style.backgroundColor = color;
                     segment.setAttribute('data-label', `${cat}: ${count}권 (${percentage.toFixed(1)}%)`);
-                    
                     setTimeout(() => { segment.style.width = `${percentage}%`; }, 100);
                     barContainer.appendChild(segment);
-
-                    legendContainer.innerHTML += `
-                        <div class="stat-item">
-                            <span class="stat-dot" style="background:${color}"></span>
-                            ${cat} ${count}
-                        </div>
-                    `;
+                    legendContainer.innerHTML += `<div class="stat-item"><span class="stat-dot" style="background:${color}"></span>${cat} ${count}</div>`;
                 }
             });
         }
 
+        // ★ 룰렛 효과가 적용된 랜덤 모달 함수
+        let rouletteInterval;
+        
         function openRandomModal() {
             if (allBooks.length === 0) return;
-            const randomIndex = Math.floor(Math.random() * allBooks.length);
-            const randomBook = allBooks[randomIndex];
-            document.getElementById('modal-img').src = randomBook.img;
-            document.getElementById('modal-title').innerText = randomBook.title;
-            document.getElementById('modal-author').innerText = randomBook.author + ' | ' + randomBook.pub;
-            document.getElementById('modal-link').href = randomBook.link;
-            document.getElementById('randomModal').style.display = 'block';
+            
+            const modal = document.getElementById('randomModal');
+            const imgEl = document.getElementById('modal-img');
+            const titleEl = document.getElementById('modal-title');
+            const authorEl = document.getElementById('modal-author');
+            const linkEl = document.getElementById('modal-link');
+
+            // 1. 초기 상태 설정
+            modal.style.display = 'block';
+            linkEl.style.display = 'none'; // 버튼 숨김 (돌아가는 동안)
+            titleEl.innerText = "두구두구두구...";
+            authorEl.innerText = "행운의 책을 고르는 중입니다!";
+            imgEl.classList.remove('pop-anim'); // 애니메이션 리셋
+
+            // 2. 룰렛 돌리기 (0.1초마다 이미지 변경)
+            rouletteInterval = setInterval(() => {
+                const randomTemp = allBooks[Math.floor(Math.random() * allBooks.length)];
+                imgEl.src = randomTemp.img;
+            }, 100);
+
+            // 3. 2초 뒤에 멈추고 결과 공개
+            setTimeout(() => {
+                clearInterval(rouletteInterval); // 룰렛 멈춤
+                
+                // 최종 당첨 책 선정
+                const finalBook = allBooks[Math.floor(Math.random() * allBooks.length)];
+                
+                // 정보 업데이트
+                imgEl.src = finalBook.img;
+                titleEl.innerText = finalBook.title;
+                authorEl.innerText = finalBook.author + ' | ' + finalBook.pub;
+                linkEl.href = finalBook.link;
+                
+                // 짜잔! 효과
+                linkEl.style.display = 'inline-block';
+                
+                // 팝! 하고 튀어나오는 애니메이션 다시 실행
+                void imgEl.offsetWidth; // 리플로우 트리거 (애니메이션 재시작용 꼼수)
+                imgEl.classList.add('pop-anim');
+
+            }, 2000); // 2000ms = 2초
         }
 
         function closeRandomModal() {
             document.getElementById('randomModal').style.display = 'none';
+            clearInterval(rouletteInterval); // 혹시 닫아도 돌아가고 있으면 멈춤
         }
 
         window.onclick = function(event) {
-            const modal = document.getElementById('randomModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
+            if (event.target == document.getElementById('randomModal')) closeRandomModal();
         }
 
         function renderBooks(filterCategory) {
             const gallery = document.getElementById('book-gallery');
             gallery.innerHTML = ''; 
-
             allBooks.forEach(book => {
                 if (filterCategory === '전체' || book.category === filterCategory) {
                     let badgeHtml = '';
                     if (book.badge === '신규') badgeHtml = '<div class="badge badge-신규">NEW</div>';
                     else if (book.badge === '추천') badgeHtml = '<div class="badge badge-추천">PICK</div>';
                     else if (book.badge === '인기') badgeHtml = '<div class="badge badge-인기">HOT</div>';
-
                     let callNoHtml = book.callNo ? `<div class="call-number">${book.callNo}</div>` : '';
-
                     if (book.img.startsWith('http')) {
                         gallery.innerHTML += `
                             <a href="${book.link}" target="_blank" class="book-card">
@@ -354,16 +355,13 @@
             const order = ['전체', '총류', '철학', '종교', '사회과학', '자연과학', '기술과학', '예술', '언어', '문학', '역사', '기타'];
             const existCats = [...new Set(allBooks.map(b => b.category))];
             const finalCats = order.filter(c => c === '전체' || existCats.includes(c));
-
             const btnContainer = document.getElementById('filter-buttons');
             btnContainer.innerHTML = '';
-
             finalCats.forEach(cat => {
                 const btn = document.createElement('button');
                 btn.className = 'filter-btn';
                 if (cat === '전체') btn.classList.add('active');
                 btn.innerText = cat;
-                
                 btn.onclick = () => {
                     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
