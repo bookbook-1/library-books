@@ -10,11 +10,10 @@
         :root { --primary: #2c3e50; --bg: #fdfaf5; --accent: #e67e22; }
         body { font-family: 'Pretendard', sans-serif; background-color: var(--bg); padding: 0; color: #333; margin: 0; }
         
-        /* ★ 공지사항 롤링 배너 스타일 */
+        /* 공지사항 롤링 배너 */
         .notice-bar {
             background: #2c3e50; color: white; width: 100%; height: 40px;
-            overflow: hidden; position: relative; align-items: center;
-            display: none; /* ★ 기본적으로 숨김 (데이터 있으면 JS가 켬) */
+            overflow: hidden; position: relative; align-items: center; display: none;
         }
         .notice-track {
             white-space: nowrap; position: absolute; will-change: transform;
@@ -49,10 +48,10 @@
         .stat-item { display: flex; align-items: center; gap: 5px; }
         .stat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-        /* 컨트롤 패널 & 검색창 */
+        /* 컨트롤 패널 */
         .controls-container { text-align: center; margin-bottom: 40px; max-width: 1200px; margin-left: auto; margin-right: auto; }
         
-        /* 실시간 검색창 스타일 */
+        /* 검색창 */
         .search-wrapper { margin-bottom: 20px; position: relative; max-width: 500px; margin: 0 auto 20px; }
         .search-input {
             width: 100%; padding: 12px 20px; font-size: 1rem; border-radius: 30px;
@@ -94,7 +93,7 @@
         .info { font-size: 0.9rem; color: #666; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .description { font-size: 0.95rem; color: #777; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: auto; }
 
-        /* 파칭코 팝업 모달 */
+        /* 모달 */
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.7); backdrop-filter: blur(8px); animation: fadeIn 0.3s;
@@ -154,11 +153,9 @@
                 🍀 오늘의 운세: 책 추천받기
             </button>
             <br>
-
             <div class="search-wrapper">
                 <input type="text" id="searchInput" class="search-input" placeholder="도서명, 작가, 출판사로 검색해보세요..." onkeyup="filterBySearch()">
             </div>
-
             <div id="filter-buttons" class="filter-container"></div>
         </div>
 
@@ -181,7 +178,6 @@
     </div>
 
     <script>
-        // 사용자 구글 시트 주소
         const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvgpFiJL5vGTUdZk3u_cnRyXeZ-Ej5u_FC3HihBMHtHs17ZBSObgQe6aWDH3UFIHpu0oKy1TYhcKPP/pub?gid=0&single=true&output=csv"; 
 
         window.addEventListener('error', function(e) {
@@ -233,34 +229,30 @@
 
                 const data = parseCSV(csvText);
 
-                // ★ 공지사항 로직 (J2 셀 확인)
-                // data[1]은 2번째 행(Row 2), data[1][9]는 10번째 열(Column J)
+                // 공지사항 (J2)
                 const noticeBar = document.getElementById('notice-bar');
                 const noticeText = document.getElementById('notice-text');
-                
                 let showNotice = false;
                 if (data.length > 1 && data[1].length >= 10) {
-                    const j2Content = data[1][9]; // J2 셀
+                    const j2Content = data[1][9]; 
                     if (j2Content && j2Content.trim() !== "") {
                         noticeText.innerText = j2Content.trim();
                         showNotice = true;
                     }
                 }
-
-                if (showNotice) {
-                    noticeBar.style.display = 'flex'; // 내용 있으면 보이기
-                } else {
-                    noticeBar.style.display = 'none'; // 내용 없으면 숨기기
-                }
+                noticeBar.style.display = showNotice ? 'flex' : 'none';
 
                 allBooks = [];
                 for (let i = 1; i < data.length; i++) {
                     const cols = data[i];
                     if (cols.length >= 6) {
+                        // ★ [수정] 제목(B열, cols[1])이 비어있으면 건너뛰기!
+                        if (!cols[1] || cols[1].trim() === "") continue;
+
                         const callNo = cols[8] ? cols[8].trim() : ''; 
                         const autoCategory = getCategoryFromCallNo(callNo);
                         allBooks.push({
-                            title: cols[1] ? cols[1].trim() : '',
+                            title: cols[1].trim(),
                             author: cols[2] || '',
                             pub: cols[3] || '',
                             desc: cols[4] || '',
